@@ -10,7 +10,7 @@ def parse_tcx(file_path):
                  'ns2': 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'}
 
     # Extract data from Trackpoints
-    times, distances, heart_rates, speeds, cadances = [], [], [], [], []
+    times, distances, heart_rates, speeds, cadances, AltitudeMeters = [], [], [], [], [], []
 
     # Loop through each Trackpoint
     for trackpoint in root.findall('.//tcx:Trackpoint', namespace):
@@ -19,6 +19,7 @@ def parse_tcx(file_path):
         heart_rate = trackpoint.find('.//tcx:HeartRateBpm/tcx:Value', namespace).text
         speed = trackpoint.find('.//ns2:Speed', namespace).text
         cadance = trackpoint.find('.//ns2:RunCadence', namespace).text
+        AltitudeMeter = trackpoint.find('.//tcx:AltitudeMeters', namespace).text
 
         # Append data to lists
         times.append(time)
@@ -26,12 +27,13 @@ def parse_tcx(file_path):
         heart_rates.append(heart_rate)
         speeds.append(speed)
         cadances.append(int(cadance)*2)
+        AltitudeMeters.append(AltitudeMeter)
 
-    return times, distances, heart_rates, speeds, cadances
+    return times, distances, heart_rates, speeds, cadances, AltitudeMeters
 
 # Example usage
-file_path = r'C:\Users\niroWin\Downloads\activity_12938332916.tcx'
-times, distances, heart_rates, speeds, cadances = parse_tcx(file_path)
+file_path = r'/home/niroli/Documents/activity_12938332916.tcx'
+times, distances, heart_rates, speeds, cadances, AltitudeMeters = parse_tcx(file_path)
 
 # print("Time data:", times)
 # print("Distance data:", distances)
