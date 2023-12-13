@@ -121,12 +121,51 @@ def main():
 
     connection.commit()
     
-    find_every_one_km = "SELECT CONCAT (FLOOR(60 / (AVG(Speed) * 3.6)), ':' , CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6)))*60)) AS result FROM ActivityData WHERE Distance <= 1000;"
-    connection.commit()
-    cursor.execute(find_every_one_km)
-    first_row = cursor.fetchone()
-    print(first_row)
+    find_total_km= "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
+
+    cursor.execute(find_total_km)
+    total_km_result = cursor.fetchone()
+    if total_km_result:
+        total_km = round(total_km_result[0]/1000)
+        print(f"Total km: {total_km}")
+    else:
+        print("Failed to retrieve Total km.")
+
     
+    find_First_km = '''SELECT
+    CONCAT
+    (FLOOR(60 / (AVG(Speed) * 3.6)),
+    ':',
+    CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6)))*60)) AS result
+    FROM
+    ActivityData
+    WHERE
+    Distance <= 1000;'''
+    
+    connection.commit()
+    cursor.execute(find_First_km)
+    first_row = cursor.fetchone()[0]
+    print("1:",first_row)
+    
+    try:
+        for find_another_km in range(1,total_km):
+            another_km = f'''SELECT 
+            CONCAT(
+                FLOOR(60 / (AVG(Speed) * 3.6)),
+                ':',
+                CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6)))*60)
+                ) AS result
+                FROM ActivityData
+                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000;'''
+            
+            connection.commit()
+            cursor.execute(another_km)
+            another_km = cursor.fetchone()[0]
+            print(f"{find_another_km+1}: {another_km}") 
+            
+    except:
+           print("This was Just First km!!!") 
+             
     connection.close()
 
 
