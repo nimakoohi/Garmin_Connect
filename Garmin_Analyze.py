@@ -32,6 +32,8 @@ def establish_db_connection():
         cursor = connection.cursor()
        
         create_tables_query = """
+        DROP TABLE IF EXISTS ActivityData;
+        
         CREATE TABLE IF NOT EXISTS ActivityData (
             id INT AUTO_INCREMENT PRIMARY KEY,
             Time DATETIME,
@@ -43,8 +45,13 @@ def establish_db_connection():
         )
         """
 
-        cursor.execute(create_tables_query)
-        connection.commit()
+        # Execute each statement separately
+        for statement in create_tables_query.split(';'):
+            if statement.strip():
+                cursor.execute(statement)
+
+        # Commit the changes to the database
+        connection.commit() 
 
         return connection, cursor
        
@@ -106,9 +113,20 @@ def main():
         INSERT INTO ActivityData (Time, Distance, Heart_Rate, Speed, Cadance, Altitude_Meters)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
+        
+        #Find 1km on Distance on ActivityData on MySQL
+        #
+        
         cursor.execute(insert_query, (each_time, each_distance, each_heart_rate, each_speed, each_cadence, each_altitude_meters))
 
     connection.commit()
+    
+    find_every_one_km = "SELECT CONCAT (FLOOR(60 / (AVG(Speed) * 3.6)), ':' , CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6)))*60)) AS result FROM ActivityData WHERE Distance <= 1000;"
+    connection.commit()
+    cursor.execute(find_every_one_km)
+    first_row = cursor.fetchone()
+    print(first_row)
+    
     connection.close()
 
 
