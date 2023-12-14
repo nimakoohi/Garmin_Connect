@@ -123,10 +123,11 @@ def main():
     find_total_km= "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
 
     cursor.execute(find_total_km)
-    total_km_result = cursor.fetchone()
+    total_km_result = round(cursor.fetchone()[0])
+    print("Total km:", total_km_result)
     if total_km_result:
-        total_km = round(total_km_result[0]/1000)
-        print(f"Total km: {total_km}")
+        total_km = round(total_km_result/1000)
+        total_km_extra = total_km_result - (total_km*1000)
     else:
         print("Failed to retrieve Total km.")
 
@@ -169,6 +170,25 @@ def main():
             cursor.execute(another_km)
             another_km = cursor.fetchone()[0]
             print(f"{find_another_km+1}: {another_km}")
+            
+        if total_km_extra > 0:
+            last_km = f'''SELECT
+            CONCAT(
+                CASE
+                    WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
+                    ELSE ''
+                END,
+                FLOOR(60 / (AVG(Speed) * 3.6)),
+                ':',
+                LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
+            ) AS result
+            FROM ActivityData
+            WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} '''
+            
+            connection.commit()
+            cursor.execute(last_km)
+            last_km = cursor.fetchone()[0]
+            print(f"0.{total_km_extra}: {last_km}")
             
     except:
            print("This was Just First km!!!") 
