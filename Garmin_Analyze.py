@@ -108,7 +108,6 @@ def main():
 
     for each_time, each_distance, each_heart_rate, each_speed, each_cadence, each_altitude_meters in zip(times, distances, heart_rates, speeds, cadances, altitude_meters):
         each_time = each_time.replace('T', ' ').replace('Z', '')
-        print("Inserting data:", each_time, each_distance, each_heart_rate, each_speed, each_cadence, each_altitude_meters)
         insert_query = """
         INSERT INTO ActivityData (Time, Distance, Heart_Rate, Speed, Cadance, Altitude_Meters)
         VALUES (%s, %s, %s, %s, %s, %s)
@@ -132,15 +131,19 @@ def main():
         print("Failed to retrieve Total km.")
 
     
-    find_First_km = '''SELECT
-    CONCAT
-    (FLOOR(60 / (AVG(Speed) * 3.6)),
-    ':',
-    CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6)))*60)) AS result
-    FROM
-    ActivityData
-    WHERE
-    Distance <= 1000;'''
+    find_First_km = '''SELECT 
+    CONCAT(
+        CASE
+            WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
+            ELSE ''
+        END,
+        FLOOR(60 / (AVG(Speed) * 3.6)),
+        ':',
+        LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
+    ) AS result
+    FROM ActivityData
+    WHERE Distance <= 1000;'''
+
     
     connection.commit()
     cursor.execute(find_First_km)
@@ -149,19 +152,23 @@ def main():
     
     try:
         for find_another_km in range(1,total_km):
-            another_km = f'''SELECT 
+            another_km = f'''SELECT
             CONCAT(
+                CASE
+                    WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
+                    ELSE ''
+                END,
                 FLOOR(60 / (AVG(Speed) * 3.6)),
                 ':',
-                CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6)))*60)
-                ) AS result
-                FROM ActivityData
-                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000;'''
+                LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
+            ) AS result
+            FROM ActivityData
+            WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 '''
             
             connection.commit()
             cursor.execute(another_km)
             another_km = cursor.fetchone()[0]
-            print(f"{find_another_km+1}: {another_km}") 
+            print(f"{find_another_km+1}: {another_km}")
             
     except:
            print("This was Just First km!!!") 
