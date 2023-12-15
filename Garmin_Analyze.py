@@ -3,7 +3,6 @@ import mysql.connector
 import os
 from datetime import datetime
 
-res_Speed = []
 
 class DatabaseManager:
     def __init__(self, host, user, password, database):
@@ -90,6 +89,15 @@ class TCXParser:
         return times, distances, heart_rates, speeds, cadances, altitude_meters
 
 def main():
+    """
+        The main function of the program. It initializes the database connection,
+        retrieves the TCX files from the specified directory, and stores the data
+        into the database. The total distance traveled and the average speed for each
+        km of the day are calculated and printed to the console.
+    """
+    
+    res_Speed = []
+    
     file_path = input('Please insert the directory where files are stored: ')
     if not os.path.exists(file_path):
         print("Error: The specified directory does not exist.")
@@ -108,7 +116,6 @@ def main():
         db_manager.cursor.executemany(insert_query, data)
         db_manager.connection.commit()
 
-        # Rest of your code for calculating total_km, res_Speed, etc.
 
         find_total_km= "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
 
@@ -118,6 +125,7 @@ def main():
         
         if total_km_result:
             total_km = round(total_km_result/1000)
+            print(total_km_result)
             total_km_extra = total_km_result - (total_km*1000)
         else:
             print("Failed to retrieve Total km.")
