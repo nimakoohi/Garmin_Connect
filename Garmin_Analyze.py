@@ -3,36 +3,39 @@ import mysql.connector
 import os
 from datetime import datetime
 
-
-connection = None
-cursor = None
-
 res_Speed = []
 
-def establish_db_connection():
-    """Establish a connection to the MySQL server and create tables."""
-    global connection, cursor
-    
-    host = "localhost"
-    user = "nirosql" 
-    password = "NiroV@159726SQL" 
-    database = "Garmin" 
-   
-    # Establish a connection to the MySQL server
-    try:
-        connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        charset='utf8mb4',
-        )
+class DatabaseManager:
+    def __init__(self, host, user, password, database):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
+        self.connection = None
+        self.cursor = None
 
-        print("Connected to MySQL!")
-       
-        # Create a cursor object to execute SQL queries
-        cursor = connection.cursor()
-       
+    def establish_connection(self):
+        try:
+            self.connection = mysql.connector.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database,
+                charset='utf8mb4',
+            )
+
+            print("Connected to MySQL!")
+
+            self.cursor = self.connection.cursor()
+
+            self.create_tables()
+
+            return True
+        except mysql.connector.Error as e:
+            print(f"Error: {e}")
+            return False
+
+    def create_tables(self):
         create_tables_query = """
         DROP TABLE IF EXISTS ActivityData;
 
@@ -45,161 +48,129 @@ def establish_db_connection():
             Cadance INT,
             Altitude_Meters FLOAT
         )
-
         """
 
-
-        # Execute each statement separately
         for statement in create_tables_query.split(';'):
             if statement.strip():
-                cursor.execute(statement)
+                self.cursor.execute(statement)
 
-        # Commit the changes to the database
-        connection.commit() 
+        self.connection.commit()
 
-        return connection, cursor
-       
-    except mysql.connector.Error as e:
-        print(f"Error: {e}")
-        return None, None
-   
+    def close_connection(self):
+        if self.connection:
+            self.connection.close()
 
-def parse_tcx(file_path):
-    """Parse the TCX file and extract relevant data."""
-    # Parse the TCX file
-    tree = ET.parse(file_path)
-    root = tree.getroot()
+class TCXParser:
+    @staticmethod
+    def parse(file_path):
+        tree = ET.parse(file_path)
+        root = tree.getroot()
 
-    # Define the namespace with the required prefixes
-    namespace = {'tcx': 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2',
-                 'ns2': 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'}
+        namespace = {'tcx': 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2',
+                     'ns2': 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'}
 
-    # Extract data from Trackpoints
-    times, distances, heart_rates, speeds, cadances, altitude_meters = [], [], [], [], [], []
+        times, distances, heart_rates, speeds, cadances, altitude_meters = [], [], [], [], [], []
 
-    # Loop through each Trackpoint
-    for trackpoint in root.findall('.//tcx:Trackpoint', namespace):
-        time = trackpoint.find('.//tcx:Time', namespace).text
-        distance = trackpoint.find('.//tcx:DistanceMeters', namespace).text
-        heart_rate = trackpoint.find('.//tcx:HeartRateBpm/tcx:Value', namespace).text
-        speed = trackpoint.find('.//ns2:Speed', namespace).text
-        cadance = trackpoint.find('.//ns2:RunCadence', namespace).text
-        altitude_meter = trackpoint.find('.//tcx:AltitudeMeters', namespace).text
+        for trackpoint in root.findall('.//tcx:Trackpoint', namespace):
+            time = trackpoint.find('.//tcx:Time', namespace).text
+            distance = trackpoint.find('.//tcx:DistanceMeters', namespace).text
+            heart_rate = trackpoint.find('.//tcx:HeartRateBpm/tcx:Value', namespace).text
+            speed = trackpoint.find('.//ns2:Speed', namespace).text
+            cadance = trackpoint.find('.//ns2:RunCadence', namespace).text
+            altitude_meter = trackpoint.find('.//tcx:AltitudeMeters', namespace).text
 
-        # Append data to lists
-        times.append(time)
-        distances.append(distance)
-        heart_rates.append(heart_rate)
-        speeds.append(speed)
-        cadances.append(int(cadance)*2)
-        altitude_meters.append(altitude_meter)
+            time = time.replace('T', ' ').replace('Z', '')
+            times.append(time)
+            distances.append(distance)
+            heart_rates.append(heart_rate)
+            speeds.append(speed)
+            cadances.append(int(cadance) * 2)
+            altitude_meters.append(altitude_meter)
 
-    return times, distances, heart_rates, speeds, cadances, altitude_meters
-
-
+        return times, distances, heart_rates, speeds, cadances, altitude_meters
 
 def main():
-    """The main function that parses TCX files and inserts the extracted data into the MySQL database."""
     file_path = input('Please insert the directory where files are stored: ')
     if not os.path.exists(file_path):
         print("Error: The specified directory does not exist.")
         return
 
-    connection, cursor = establish_db_connection()
-    if connection is None:
-        return
+    db_manager = DatabaseManager(host="localhost", user="nirosql", password="NiroV@159726SQL", database="Garmin")
+    if db_manager.establish_connection():
+        times, distances, heart_rates, speeds, cadances, altitude_meters = TCXParser.parse(file_path)
+        data = list(zip(times, distances, heart_rates, speeds, cadances, altitude_meters))
 
-    times, distances, heart_rates, speeds, cadances, altitude_meters = parse_tcx(file_path)
-
-    for each_time, each_distance, each_heart_rate, each_speed, each_cadence, each_altitude_meters in zip(times, distances, heart_rates, speeds, cadances, altitude_meters):
-        each_time = each_time.replace('T', ' ').replace('Z', '')
         insert_query = """
         INSERT INTO ActivityData (Time, Distance, Heart_Rate, Speed, Cadance, Altitude_Meters)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
+
+        db_manager.cursor.executemany(insert_query, data)
+        db_manager.connection.commit()
+
+        # Rest of your code for calculating total_km, res_Speed, etc.
+
+        find_total_km= "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
+
+        db_manager.cursor.execute(find_total_km)
+        total_km_result = round(db_manager.cursor.fetchone()[0])
         
-        cursor.execute(insert_query, (each_time, each_distance, each_heart_rate, each_speed, each_cadence, each_altitude_meters))
+        
+        if total_km_result:
+            total_km = round(total_km_result/1000)
+            total_km_extra = total_km_result - (total_km*1000)
+        else:
+            print("Failed to retrieve Total km.")
 
-    connection.commit()
+        
+        try:
+            for find_another_km in range(0,total_km):
+                another_km = f'''SELECT
+                CONCAT(
+                    CASE
+                        WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
+                        ELSE ''
+                    END,
+                    FLOOR(60 / (AVG(Speed) * 3.6)),
+                    ':',
+                    LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
+                ) AS result
+                FROM ActivityData
+                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(another_km)
+                another_km = db_manager.cursor.fetchone()[0]
+                
+                res_Speed.append(another_km)
+                
+            if total_km_extra > 0:
+                last_km = f'''SELECT
+                CONCAT(
+                    CASE
+                        WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
+                        ELSE ''
+                    END,
+                    FLOOR(60 / (AVG(Speed) * 3.6)),
+                    ':',
+                    LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
+                ) AS result
+                FROM ActivityData
+                WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(last_km)
+                last_km = db_manager.cursor.fetchone()[0]
+
+                res_Speed.append(last_km)
+                
+        except:
+            print("This was Just First km!!!") 
+
+        db_manager.close_connection()
+
+        print(res_Speed)
+
     
-    find_total_km= "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
-
-    cursor.execute(find_total_km)
-    total_km_result = round(cursor.fetchone()[0])
-    
-    
-    if total_km_result:
-        total_km = round(total_km_result/1000)
-        total_km_extra = total_km_result - (total_km*1000)
-    else:
-        print("Failed to retrieve Total km.")
-
-    
-    find_First_km = '''SELECT 
-    CONCAT(
-        CASE
-            WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
-            ELSE ''
-        END,
-        FLOOR(60 / (AVG(Speed) * 3.6)),
-        ':',
-        LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
-    ) AS result
-    FROM ActivityData
-    WHERE Distance <= 1000;'''
-
-    connection.commit()
-    cursor.execute(find_First_km)
-    first_km = cursor.fetchone()[0]
-    
-    res_Speed.append(first_km)
-    
-    try:
-        for find_another_km in range(1,total_km):
-            another_km = f'''SELECT
-            CONCAT(
-                CASE
-                    WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
-                    ELSE ''
-                END,
-                FLOOR(60 / (AVG(Speed) * 3.6)),
-                ':',
-                LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
-            ) AS result
-            FROM ActivityData
-            WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 '''
-            
-            connection.commit()
-            cursor.execute(another_km)
-            another_km = cursor.fetchone()[0]
-            
-            res_Speed.append(another_km)
-            
-        if total_km_extra > 0:
-            last_km = f'''SELECT
-            CONCAT(
-                CASE
-                    WHEN LENGTH(FLOOR(60 / (AVG(Speed) * 3.6))) = 1 THEN '0'
-                    ELSE ''
-                END,
-                FLOOR(60 / (AVG(Speed) * 3.6)),
-                ':',
-                LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
-            ) AS result
-            FROM ActivityData
-            WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} '''
-            
-            connection.commit()
-            cursor.execute(last_km)
-            last_km = cursor.fetchone()[0]
-
-            res_Speed.append(last_km)
-            
-    except:
-           print("This was Just First km!!!") 
-             
-    connection.close()
-
-
 if __name__ == "__main__":
     main()
