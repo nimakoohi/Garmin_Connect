@@ -7,6 +7,8 @@ from datetime import datetime
 connection = None
 cursor = None
 
+res_Speed = []
+
 def establish_db_connection():
     """Establish a connection to the MySQL server and create tables."""
     global connection, cursor
@@ -33,7 +35,7 @@ def establish_db_connection():
        
         create_tables_query = """
         DROP TABLE IF EXISTS ActivityData;
-        
+
         CREATE TABLE IF NOT EXISTS ActivityData (
             id INT AUTO_INCREMENT PRIMARY KEY,
             Time DATETIME,
@@ -43,7 +45,9 @@ def establish_db_connection():
             Cadance INT,
             Altitude_Meters FLOAT
         )
+
         """
+
 
         # Execute each statement separately
         for statement in create_tables_query.split(';'):
@@ -93,6 +97,7 @@ def parse_tcx(file_path):
     return times, distances, heart_rates, speeds, cadances, altitude_meters
 
 
+
 def main():
     """The main function that parses TCX files and inserts the extracted data into the MySQL database."""
     file_path = input('Please insert the directory where files are stored: ')
@@ -113,9 +118,6 @@ def main():
         VALUES (%s, %s, %s, %s, %s, %s)
         """
         
-        #Find 1km on Distance on ActivityData on MySQL
-        #
-        
         cursor.execute(insert_query, (each_time, each_distance, each_heart_rate, each_speed, each_cadence, each_altitude_meters))
 
     connection.commit()
@@ -124,7 +126,8 @@ def main():
 
     cursor.execute(find_total_km)
     total_km_result = round(cursor.fetchone()[0])
-    print("Total km:", total_km_result)
+    
+    
     if total_km_result:
         total_km = round(total_km_result/1000)
         total_km_extra = total_km_result - (total_km*1000)
@@ -145,11 +148,11 @@ def main():
     FROM ActivityData
     WHERE Distance <= 1000;'''
 
-    
     connection.commit()
     cursor.execute(find_First_km)
-    first_row = cursor.fetchone()[0]
-    print("1:",first_row)
+    first_km = cursor.fetchone()[0]
+    
+    res_Speed.append(first_km)
     
     try:
         for find_another_km in range(1,total_km):
@@ -169,7 +172,8 @@ def main():
             connection.commit()
             cursor.execute(another_km)
             another_km = cursor.fetchone()[0]
-            print(f"{find_another_km+1}: {another_km}")
+            
+            res_Speed.append(another_km)
             
         if total_km_extra > 0:
             last_km = f'''SELECT
@@ -188,7 +192,8 @@ def main():
             connection.commit()
             cursor.execute(last_km)
             last_km = cursor.fetchone()[0]
-            print(f"0.{total_km_extra}: {last_km}")
+
+            res_Speed.append(last_km)
             
     except:
            print("This was Just First km!!!") 
