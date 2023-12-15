@@ -100,7 +100,10 @@ def main():
     """
     
     res_Speed = []
-    
+    res_hr = []
+    res_cd = []
+
+
     file_path = input('Please insert the directory where files are stored: ')
     if not os.path.exists(file_path):
         print("Error: The specified directory does not exist.")
@@ -135,7 +138,7 @@ def main():
             plt.xticks([])
             plt.yticks([])
             plt.xlabel("Time")
-            plt.ylabel("Speed (m/s)")
+            plt.ylabel("Pace")
             plt.title("Speed vs Time")
             plt.xticks(rotation=45)
             plt.tight_layout()
@@ -154,7 +157,6 @@ def main():
         
         if total_km_result:
             total_km = round(total_km_result/1000)
-            print(total_km_result)
             total_km_extra = total_km_result - (total_km*1000)
         else:
             print("Failed to retrieve Total km.")
@@ -173,13 +175,37 @@ def main():
                     LPAD(CEILING(((60 / (AVG(Speed) * 3.6)) - FLOOR(60 / (AVG(Speed) * 3.6))) * 60), 2, '0')
                 ) AS result
                 FROM ActivityData
-                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 '''
+                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 
+                '''
+                
                 
                 db_manager.connection.commit()
                 db_manager.cursor.execute(another_km)
                 another_km = db_manager.cursor.fetchone()[0]
-                
                 res_Speed.append(another_km)
+
+                
+                hr = f'''
+                SELECT Heart_Rate AS HR100 FROM activitydata
+                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 ORDER BY id DESC LIMIT 1;
+                '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(hr)
+                hr = db_manager.cursor.fetchone()[0]
+                res_hr.append(hr)
+
+                
+                cd = f'''
+                SELECT Cadance AS cd FROM activitydata
+                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 ORDER BY id DESC LIMIT 1;
+                '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(cd)
+                cd = db_manager.cursor.fetchone()[0]
+                res_cd.append(cd)
+                
                 
             if total_km_extra > 0:
                 last_km = f'''SELECT
@@ -200,13 +226,38 @@ def main():
                 last_km = db_manager.cursor.fetchone()[0]
 
                 res_Speed.append(last_km)
+
+                hr = f'''
+                SELECT Heart_Rate AS HR100 FROM activitydata
+                WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} ORDER BY id DESC LIMIT 1;
+                '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(hr)
+                hr = db_manager.cursor.fetchone()[0]
+                res_hr.append(hr)
+
+                cd = f'''
+                SELECT Cadance AS cd FROM activitydata
+                WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} ORDER BY id DESC LIMIT 1;
+                '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(cd)
+                cd = db_manager.cursor.fetchone()[0]
+                res_cd.append(cd)
+                
+                
                 
         except:
             print("This was Just First km!!!") 
 
         db_manager.close_connection()
 
+        print(total_km_result)
         print(res_Speed)
+        print(res_hr)
+        print(res_cd)
 
     
 if __name__ == "__main__":
