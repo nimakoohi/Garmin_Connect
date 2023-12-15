@@ -2,6 +2,9 @@ import xml.etree.ElementTree as ET
 import mysql.connector
 import os
 from datetime import datetime
+import matplotlib.pyplot as plt
+from matplotlib.dates import date2num
+
 
 
 class DatabaseManager:
@@ -115,6 +118,32 @@ def main():
 
         db_manager.cursor.executemany(insert_query, data)
         db_manager.connection.commit()
+
+        
+        time_column = times
+        distance_column = distances
+        heart_rate_column = heart_rates
+        speed_column = speeds
+        cadence_column = cadances
+        altitude_column = altitude_meters
+        
+            # Plotting speeds against times
+        try:
+
+            plt.plot(time_column, speed_column)
+
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlabel("Time")
+            plt.ylabel("Speed (m/s)")
+            plt.title("Speed vs Time")
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            plt.savefig('my_plot.png')
+            plt.show()
+
+        except Exception as e:
+            print(f"Error plotting speeds: {e}")
 
 
         find_total_km= "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
