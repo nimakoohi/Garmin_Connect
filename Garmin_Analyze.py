@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
+from docx import Document
 
 
 
@@ -102,6 +103,7 @@ def main():
     res_Speed = []
     res_hr = []
     res_cd = []
+    res_al = []
 
 
     file_path = input('Please insert the directory where files are stored: ')
@@ -186,7 +188,7 @@ def main():
 
                 
                 hr = f'''
-                SELECT Heart_Rate AS HR100 FROM activitydata
+                SELECT CEILING(AVG(Heart_Rate)) AS HR100 FROM activitydata
                 WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 ORDER BY id DESC LIMIT 1;
                 '''
                 
@@ -197,7 +199,7 @@ def main():
 
                 
                 cd = f'''
-                SELECT Cadance AS cd FROM activitydata
+                SELECT CEILING(AVG(Cadance)) AS cd FROM activitydata
                 WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 ORDER BY id DESC LIMIT 1;
                 '''
                 
@@ -205,6 +207,17 @@ def main():
                 db_manager.cursor.execute(cd)
                 cd = db_manager.cursor.fetchone()[0]
                 res_cd.append(cd)
+
+
+                al_me = f'''
+                SELECT CEILING(AVG(Altitude_Meters)) AS AL_Me FROM activitydata
+                WHERE Distance BETWEEN {find_another_km}000 AND {find_another_km+1}000 ORDER BY id DESC LIMIT 1;
+                '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(al_me)
+                al_me = db_manager.cursor.fetchone()[0]
+                res_al.append(al_me)
                 
                 
             if total_km_extra > 0:
@@ -228,7 +241,7 @@ def main():
                 res_Speed.append(last_km)
 
                 hr = f'''
-                SELECT Heart_Rate AS HR100 FROM activitydata
+                SELECT CEILING(AVG(Heart_Rate)) AS HR100 FROM activitydata
                 WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} ORDER BY id DESC LIMIT 1;
                 '''
                 
@@ -238,7 +251,7 @@ def main():
                 res_hr.append(hr)
 
                 cd = f'''
-                SELECT Cadance AS cd FROM activitydata
+                SELECT CEILING(AVG(Cadance)) AS cd FROM activitydata
                 WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} ORDER BY id DESC LIMIT 1;
                 '''
                 
@@ -246,6 +259,17 @@ def main():
                 db_manager.cursor.execute(cd)
                 cd = db_manager.cursor.fetchone()[0]
                 res_cd.append(cd)
+
+                
+                al_me = f'''
+                SELECT CEILING(AVG(Altitude_Meters)) AS AL_Me FROM activitydata
+                WHERE Distance BETWEEN {total_km*1000} AND {total_km_result} ORDER BY id DESC LIMIT 1;
+                '''
+                
+                db_manager.connection.commit()
+                db_manager.cursor.execute(al_me)
+                al_me = db_manager.cursor.fetchone()[0]
+                res_al.append(al_me)
                 
                 
                 
@@ -254,10 +278,130 @@ def main():
 
         db_manager.close_connection()
 
-        print(total_km_result)
-        print(res_Speed)
-        print(res_hr)
-        print(res_cd)
+        Physical_Comfort_Response1 = input('''How did your body feel during the run? Any specific areas of discomfort or pain?''')
+        Physical_Comfort_Response2 = input('''Did you experience any muscle tightness, soreness, or stiffness?''')
+        
+        Breathing_and_Cardiovascular_Response1 = input('''How was your breathing throughout the run? Was it comfortable or labored? ''')
+        Breathing_and_Cardiovascular_Response2 = input('''Did you notice any changes in your heart rate, and if so, were they within a comfortable range? ''')
+        
+        Energy_Levels_Response = input('''How would you describe your energy levels during the run? Did you feel fatigued at any point? ''')
+
+        Mental_State_Response1 = input('''What was your mental state like during the run? Were you focused, distracted, or perhaps in a flow state? ''')
+        Mental_State_Response2 = input('''Did you experience any mental barriers or breakthroughs? ''')
+
+        Running_Form_Response1 = input('''Were you mindful of your running form? Did you notice any changes in your gait or posture? ''')
+        Running_Form_Response2 = input('''Did you encounter any challenges related to your form? ''')
+        
+        Terrain_and_Environment_Response1 = input('''How did the terrain (e.g., flat, hilly, uneven) impact your running experience? ''')
+        Terrain_and_Environment_Response2 = input('''Did the weather or environmental conditions affect your performance or enjoyment? ''')
+
+        Hydration_and_Nutrition_Response1 = input('''Did you feel adequately hydrated and fueled before and during the run? ''')
+        Hydration_and_Nutrition_Response2 = input('''Did you experience any issues related to nutrition or hydration? ''')
+
+        Goal_Achievement_Response1 = input('''Were you able to meet the goals you set for yourself during the run? ''')
+        Goal_Achievement_Response2 = input('''How do you feel about your overall performance and progress? ''')
+
+        Recovery_Response1 = input('''How is your body feeling post-run? Any lingering discomfort or signs of quick recovery? ''')
+        Recovery_Response2 = input('''Did you engage in any post-run stretching or recovery activities? ''')
+
+        
+        Overall_Satisfaction1 = input('''On a scale of 1 to 10, how satisfied are you with your running experience today? ''')
+        Overall_Satisfaction2 = input('''What aspects of the run brought you the most joy or fulfillment? ''')
+        
+        # Create a new Word document
+        doc = Document()
+
+
+        # Add content to the document 
+        doc.add_heading(f'{total_km_result} meters on {times[0]}', level=1)
+
+
+        output_text = (f'''
+        Hi.
+        I hope this message finds you well. Today, I completed a run covering a distance of  {total_km_result} meters,
+        from {times[0]} to {times[-1]}
+        I would greatly appreciate it if you could analyze my pace and share some feedback. 
+        Here's the breakdown of my pace for each kilometer:
+        {res_Speed},
+        Additionally, my heart rate for each kilometer was:
+        {res_hr},
+        my cadence: {res_cd},
+        and the altitude: {res_al},
+        I would be grateful for any insights or recommendations you can provide based on this data.
+        Thank you in advance for your guidance!
+        Best regards
+        
+        Physical Comfort:
+        How did your body feel during the run? Any specific areas of discomfort or pain?
+        {Physical_Comfort_Response1}
+        Did you experience any muscle tightness, soreness, or stiffness?
+        {Physical_Comfort_Response2}
+
+        
+        Breathing and Cardiovascular Response:
+        How was your breathing throughout the run? Was it comfortable or labored?
+        {Breathing_and_Cardiovascular_Response1}
+        Did you notice any changes in your heart rate, and if so, were they within a comfortable range?
+        {Breathing_and_Cardiovascular_Response2}
+
+        Energy Levels:
+        How would you describe your energy levels during the run? Did you feel fatigued at any point?
+        {Energy_Levels_Response}
+
+        Mental State:
+        What was your mental state like during the run? Were you focused, distracted, or perhaps in a flow state?
+        {Mental_State_Response1}
+        Did you experience any mental barriers or breakthroughs?
+        {Mental_State_Response2}
+        
+        Running Form:
+        Were you mindful of your running form? Did you notice any changes in your gait or posture?
+        {Running_Form_Response1}
+        Did you encounter any challenges related to your form?
+        {Running_Form_Response2}
+        
+        Terrain and Environment:
+        How did the terrain (e.g., flat, hilly, uneven) impact your running experience?
+        {Terrain_and_Environment_Response1}
+        Did the weather or environmental conditions affect your performance or enjoyment?
+        {Terrain_and_Environment_Response2}
+        
+        
+        Hydration and Nutrition:
+        Did you feel adequately hydrated and fueled before and during the run?
+        {Hydration_and_Nutrition_Response1}
+        Did you experience any issues related to nutrition or hydration?
+        {Hydration_and_Nutrition_Response2}
+        
+        
+        Goal Achievement:
+        Were you able to meet the goals you set for yourself during the run?
+        {Goal_Achievement_Response1}
+        How do you feel about your overall performance and progress?
+        {Goal_Achievement_Response2}
+        
+        
+        Recovery:
+        How is your body feeling post-run? Any lingering discomfort or signs of quick recovery?
+        {Recovery_Response1}
+        Did you engage in any post-run stretching or recovery activities?
+        {Recovery_Response2}
+        
+        
+        Overall Satisfaction:
+        On a scale of 1 to 10, how satisfied are you with your running experience today?
+        {Overall_Satisfaction1}
+        What aspects of the run brought you the most joy or fulfillment?
+        {Overall_Satisfaction2}
+        ''')
+        
+        # Add the output text to the document
+        doc.add_paragraph(output_text)
+
+        # Save the document
+        doc.save(f'{times[0].split()[0]} - {total_km_result}.docx')
+
+        print("Output has been printed to Word document.")
 
     
 if __name__ == "__main__":
