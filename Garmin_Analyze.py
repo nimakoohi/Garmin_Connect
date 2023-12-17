@@ -7,6 +7,15 @@ from matplotlib.dates import date2num
 from docx import Document
 
 
+def create_directory(directory_path):
+    try:
+        # Create target directory
+        os.makedirs(directory_path)
+        print(f"Directory '{directory_path}' created successfully.")
+    except FileExistsError:
+        print(f"Directory '{directory_path}' already exists.")
+
+
 
 class DatabaseManager:
     def __init__(self, host, user, password, database):
@@ -106,7 +115,13 @@ def main():
     res_al = []
 
 
-    file_path = input('Please insert the directory where files are stored: ')
+    name = input("Please insert your full name: ")
+    
+    save_directory = os.path.join(os.getcwd(), input("Please insert the directory where you want store your files: "))
+
+    create_directory(save_directory)
+
+    file_path = input('Please insert the directory where tcx files are stored: ')
     if not os.path.exists(file_path):
         print("Error: The specified directory does not exist.")
         return
@@ -145,7 +160,6 @@ def main():
             plt.xticks(rotation=45)
             plt.tight_layout()
             plt.savefig('my_plot.png')
-            plt.show()
 
         except Exception as e:
             print(f"Error plotting speeds: {e}")
@@ -278,15 +292,18 @@ def main():
 
         db_manager.close_connection()
 
-        Physical_Comfort_Response1 = input('''How did your body feel during the run? Any specific areas of discomfort or pain?''')
-        Physical_Comfort_Response2 = input('''Did you experience any muscle tightness, soreness, or stiffness?''')
+        Physical_Comfort_Response1 = input('''How did your body feel during the run? Any specific areas of discomfort or pain? ''')
+        Physical_Comfort_Response2 = input('''Did you experience any muscle tightness, soreness, or stiffness? ''')
         
         Breathing_and_Cardiovascular_Response1 = input('''How was your breathing throughout the run? Was it comfortable or labored? ''')
-        Breathing_and_Cardiovascular_Response2 = input('''Did you notice any changes in your heart rate, and if so, were they within a comfortable range? ''')
+        Breathing_and_Cardiovascular_Response2 = input('''Did you notice any changes in your heart rate,
+                                                       and if so, were they within a comfortable range? ''')
         
         Energy_Levels_Response = input('''How would you describe your energy levels during the run? Did you feel fatigued at any point? ''')
 
-        Mental_State_Response1 = input('''What was your mental state like during the run? Were you focused, distracted, or perhaps in a flow state? ''')
+        Mental_State_Response1 = input('''What was your mental state like during the run? Were you focused,
+                                       distracted, or perhaps in a flow state? ''')
+
         Mental_State_Response2 = input('''Did you experience any mental barriers or breakthroughs? ''')
 
         Running_Form_Response1 = input('''Were you mindful of your running form? Did you notice any changes in your gait or posture? ''')
@@ -397,11 +414,20 @@ def main():
         
         # Add the output text to the document
         doc.add_paragraph(output_text)
-
+        
         # Save the document
-        doc.save(f'{times[0].split()[0]} - {total_km_result}.docx')
+        doc_file_path = os.path.join(save_directory, f'{name} - {times[0].split()[0]} - {total_km_result}.docx')
+        doc.save(doc_file_path)
 
-        print("Output has been printed to Word document.")
+        print("Output has been printed to Word document:", doc_file_path)
+
+        # Save the image file
+        image_file_path = os.path.join(save_directory, f'{name} - {times[0].split()[0]} - {total_km_result}.png')
+        try:
+            plt.savefig(image_file_path)
+            print("Image file saved successfully:", image_file_path)
+        except Exception as e:
+            print(f"Error saving image file: {e}")
 
     
 if __name__ == "__main__":
