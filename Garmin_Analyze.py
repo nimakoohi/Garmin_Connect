@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import mysql.connector
 import os
+import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
@@ -178,6 +179,34 @@ def main():
             print("Failed to retrieve Total km.")
 
         
+        # Create a pandas dataframe
+        df = pd.DataFrame({
+            "Pace (min/km)": speed_column,
+            "Heart Rate (bpm)": heart_rate_column,
+            "Cadence (steps/min)": cadence_column,
+            "Altitude (m)": altitude_column
+        })
+        
+        
+        # Convert 'Pace (min/km)' column to numeric values
+        df['Pace (min/km)'] = pd.to_numeric(df['Pace (min/km)'], errors='coerce')
+
+        # Calculate the standard deviation of pace
+        standard_deviation_pace = df['Pace (min/km)'].std()
+
+
+        df['Heart Rate (bpm)'] = pd.to_numeric(df['Heart Rate (bpm)'], errors='coerce')
+        # Calculate the standard deviation of heart rate
+        standard_deviation_heart_rate = df['Heart Rate (bpm)'].std()
+
+        df['Cadence (steps/min)'] = pd.to_numeric(df['Cadence (steps/min)'], errors='coerce')
+        # Calculate the standard deviation of cadence
+        standard_deviation_cadence = df['Cadence (steps/min)'].std()
+
+        df['Altitude (m)'] = pd.to_numeric(df['Altitude (m)'], errors='coerce')
+        # Calculate the standard deviation of altitude
+        standard_deviation_altitude = df['Altitude (m)'].std()
+        
         try:
             for find_another_km in range(0,total_km):
                 another_km = f'''SELECT
@@ -335,18 +364,35 @@ def main():
 
         output_text = (f'''
         Hi.
-        I hope this message finds you well. Today, I completed a run covering a distance of  {total_km_result} meters,
-        from {times[0]} to {times[-1]}
-        I would greatly appreciate it if you could analyze my pace and share some feedback. 
-        Here's the breakdown of my pace for each kilometer:
-        {res_Speed},
-        Additionally, my heart rate for each kilometer was:
-        {res_hr},
-        my cadence: {res_cd},
-        and the altitude: {res_al},
-        I would be grateful for any insights or recommendations you can provide based on this data.
-        Thank you in advance for your guidance!
-        Best regards
+        I hope this message finds you well. I wanted to share the details of my recent run for your analysis and feedback.
+        
+        **Run Details:**
+        - Distance: {total_km_result} meters
+        - Duration: {times[0]} to {times[-1]}
+        
+        **Average Pace per Kilometer:**
+        - {res_Speed}
+        
+        **Average Heart Rate per Kilometer:**
+        - {res_hr}
+        
+        **Average Cadence per Kilometer:**
+        - {res_cd}
+        
+        **Average Altitude per Kilometer:**
+        - {res_al}
+        
+        **Standard Deviation:**
+        - Pace: {standard_deviation_pace} m/s
+        - Heart Rate: {standard_deviation_heart_rate} bpm
+        - Cadence: {standard_deviation_cadence} steps/min
+        - Altitude: {standard_deviation_altitude} m
+
+        I would greatly appreciate your insights and any recommendations you may have based on this data. Thank you in advance for your guidance.
+
+        Best regards,
+        
+        Nima
         
         Physical Comfort:
         How did your body feel during the run? Any specific areas of discomfort or pain?
