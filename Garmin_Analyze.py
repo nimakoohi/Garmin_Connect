@@ -116,8 +116,6 @@ def main():
     res_al = []
 
 
-    name = input("Please insert your full name: ")
-    
     save_directory = os.path.join(os.getcwd(), input("Please insert the directory where you want store your files: "))
 
     create_directory(save_directory)
@@ -127,6 +125,20 @@ def main():
         print("Error: The specified directory does not exist.")
         return
 
+    
+    name = input("Please insert your full name: ")
+    
+    types_of_runs = input(''' Please tell us what types of runs you do:
+    - Recovery Run
+    - Long Run
+    - Interval Run
+    - Tempo Run
+    - Fartlek Run
+    - Hill Run
+    - Progression Run
+    - Cross-Training Run 
+    ''')
+    
     db_manager = DatabaseManager(host="localhost", user="nirosql", password="NiroV@159726SQL", database="Garmin")
     if db_manager.establish_connection():
         times, distances, heart_rates, speeds, cadances, altitude_meters = TCXParser.parse(file_path)
@@ -364,7 +376,7 @@ def main():
 
         output_text = (f'''
         Hi.
-        I hope this message finds you well. I wanted to share the details of my recent run for your analysis and feedback.
+        I hope this message finds you well. I wanted to share the details of my recent {types_of_runs} run for your analysis and feedback.
         
         **Run Details:**
         - Distance: {total_km_result} meters
@@ -462,13 +474,13 @@ def main():
         doc.add_paragraph(output_text)
         
         # Save the document
-        doc_file_path = os.path.join(save_directory, f'{name} - {times[0].split()[0]} - {total_km_result}.docx')
+        doc_file_path = os.path.join(save_directory, f'{name} - {types_of_runs} - {times[0].split()[0]} - {total_km_result}.docx')
         doc.save(doc_file_path)
 
         print("Output has been printed to Word document:", doc_file_path)
 
         # Save the image file
-        image_file_path = os.path.join(save_directory, f'{name} - {times[0].split()[0]} - {total_km_result}.png')
+        image_file_path = os.path.join(save_directory, f'{name} - {types_of_runs} - {times[0].split()[0]} - {total_km_result}.png')
         try:
             plt.savefig(image_file_path)
             print("Image file saved successfully:", image_file_path)
