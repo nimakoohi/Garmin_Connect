@@ -1,3 +1,6 @@
+#1. Add all wourkout on Database
+#2. Compare long run with each other
+
 import xml.etree.ElementTree as ET
 import mysql.connector
 import os
@@ -9,15 +12,12 @@ import configparser
 
 def connect_to_database():
     save_directory = os.path.join(os.getcwd(),
-                                  input("Please insert the directory where you"
-                                        "want store your files: "))
+                                  input("Please insert the directory where you want store your files: "))
     create_directory(save_directory)
-    file_path = input('Please insert the directory where tcx files'
-                      'are stored: ')
+    file_path = input('Please insert the directory where tcx files are stored: ')
     while not os.path.exists(file_path):
         print("Error: The specified directory does not exist.")
-        file_path = input('Please insert the directory where tcx files '
-                  'are stored: ')
+        file_path = input('Please insert the directory where tcx files are stored: ')
       
     config = configparser.ConfigParser()
     try:
@@ -28,7 +28,6 @@ def connect_to_database():
     except configparser.Error as e:
         print(f"Error reading the configuration file: {e}")
 
-       
     db = DatabaseManager(config)
 
     # connect to db
@@ -76,7 +75,6 @@ def Plotting(time_column, heart_rate_column, speed_column, cadence_column,
 
     except Exception as e:
         print(f"Error plotting speeds: {e}")
-
     
     # Save the image file
     image_file_path = os.path.join(save_directory, f'{name} - {types_of_runs}'
@@ -87,7 +85,6 @@ def Plotting(time_column, heart_rate_column, speed_column, cadence_column,
     except Exception as e:
         print(f"Error saving image file: {e}")
 
-
 def create_directory(directory_path):
     try:
         # Create target directory
@@ -95,8 +92,6 @@ def create_directory(directory_path):
         print(f"Directory '{directory_path}' created successfully.")
     except FileExistsError:
         print(f"Directory '{directory_path}' already exists.")
-
-
 
 class DatabaseManager:
     def __init__(self, config):
@@ -241,11 +236,11 @@ def main():
         "Altitude (m)": altitude_column
     })
 
-    # Convert 'Pace (min/km)' column to numeric values
-    df['Pace (min/km)'] = pd.to_numeric(df['Pace (min/km)'], errors='coerce')
+    # Convert 'Pace (m/s)' column to numeric values
+    df['Pace (m/s)'] = pd.to_numeric(df['Pace (m/s)'], errors='coerce')
 
     # Calculate the standard deviation of pace
-    standard_deviation_pace = df['Pace (min/km)'].std()
+    standard_deviation_pace = df['Pace (m/s)'].std()
 
     df['Heart Rate (bpm)'] = pd.to_numeric(df['Heart Rate (bpm)'], errors='coerce')
     # Calculate the standard deviation of heart rate
@@ -440,6 +435,7 @@ def main():
 
     Nima
 
+    These are my answers after the run:
     Physical Comfort:
     How did your body feel during the run? Any specific areas of discomfort or pain?
     {Physical_Comfort_Response1}
