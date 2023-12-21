@@ -1,33 +1,18 @@
 #1. Add all wourkout on Database
 #2. Compare long run with each other
 
-import xml.etree.ElementTree as ET
-import mysql.connector
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 from docx import Document
-import configparser
+from DatabaseManager import DatabaseManager
+from TCXParser import TCXParser
+from Plotting import Plotting
+from ConfigHandler import read_config
 
+def connect_to_database(file_path):
 
-def connect_to_database():
-    save_directory = os.path.join(os.getcwd(),
-                                  input("Please insert the directory where you want store your files: "))
-    create_directory(save_directory)
-    file_path = input('Please insert the directory where tcx files are stored: ')
-    while not os.path.exists(file_path):
-        print("Error: The specified directory does not exist.")
-        file_path = input('Please insert the directory where tcx files are stored: ')
+    config = read_config()
       
-    config = configparser.ConfigParser()
-    try:
-        config.read('config.ini')
-
-    except FileNotFoundError:
-        print("Error: The configuration file 'config.ini' was not found.")
-    except configparser.Error as e:
-        print(f"Error reading the configuration file: {e}")
-
     db = DatabaseManager(config)
 
     # connect to db
@@ -52,38 +37,9 @@ def connect_to_database():
         altitude_column = altitude_meters
 
         return (times, time_column, heart_rate_column, speed_column,
-                cadence_column, altitude_column, db, save_directory)
+                cadence_column, altitude_column, db)
 
     return None  # Return None if the connection is not established
-
-
-def Plotting(time_column, heart_rate_column, speed_column, cadence_column,
-             altitude_column, save_directory, name, total_km_result, types_of_runs, times):
-    # Plotting speeds against times
-    try:
-
-        plt.plot(time_column, speed_column)
-
-        plt.xticks([])
-        plt.yticks([])
-        plt.xlabel("Time")
-        plt.ylabel("Pace")
-        plt.title("Speed vs Time")
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig('my_plot.png')
-
-    except Exception as e:
-        print(f"Error plotting speeds: {e}")
-    
-    # Save the image file
-    image_file_path = os.path.join(save_directory, f'{name} - {types_of_runs}'
-                                   '- {times[0].split()[0]} - {total_km_result}.png')
-    try:
-        plt.savefig(image_file_path)
-        print("Image file saved successfully:", image_file_path)
-    except Exception as e:
-        print(f"Error saving image file: {e}")
 
 def create_directory(directory_path):
     try:
@@ -93,90 +49,6 @@ def create_directory(directory_path):
     except FileExistsError:
         print(f"Directory '{directory_path}' already exists.")
 
-class DatabaseManager:
-    def __init__(self, config):
-        self.host = config['Database']['host'] 
-        self.user = config['Database']['user']
-        self.password = config['Database']['password']
-        self.db = config['Database']['database']
-
-    def establish_connection(self):
-        try:
-            self.connection = mysql.connector.connect(
-                host=self.host,
-                user=self.user,
-                password=self.password,
-                database=self.db,
-                charset='utf8mb4',
-            )
-
-            print("Connected to MySQL!")
-
-            self.cursor = self.connection.cursor()
-
-            self.create_tables()
-
-            return True
-        except mysql.connector.Error as e:
-            print(f"Error: {e}")
-            return False
-
-    def create_tables(self):
-        create_tables_query = """
-        DROP TABLE IF EXISTS ActivityData;
-
-        CREATE TABLE IF NOT EXISTS ActivityData (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            Time DATETIME,
-            Distance FLOAT,
-            Heart_Rate FLOAT,
-            Speed FLOAT,
-            Cadance INT,
-            Altitude_Meters FLOAT
-        )
-        """
-
-        for statement in create_tables_query.split(';'):
-            if statement.strip():
-                self.cursor.execute(statement)
-
-        self.connection.commit()
-
-    def close_connection(self):
-        if self.connection:
-            self.connection.close()
-
-class TCXParser:
-    @staticmethod
-    def parse(file_path):
-        tree = ET.parse(file_path)
-        root = tree.getroot()
-
-        namespace = {'tcx': 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2',
-                     'ns2': 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'}
-
-        (times, distances, heart_rates, speeds,
-         cadances, altitude_meters) = [], [], [], [], [], []
-
-        for trackpoint in root.findall('.//tcx:Trackpoint', namespace):
-            time = trackpoint.find('.//tcx:Time', namespace).text
-            distance = trackpoint.find('.//tcx:DistanceMeters', namespace).text
-            heart_rate = trackpoint.find('.//tcx:HeartRateBpm/tcx:Value',
-                                         namespace).text
-            speed = trackpoint.find('.//ns2:Speed', namespace).text
-            cadance = trackpoint.find('.//ns2:RunCadence', namespace).text
-            altitude_meter = trackpoint.find('.//tcx:AltitudeMeters',
-                                             namespace).text
-
-            time = time.replace('T', ' ').replace('Z', '')
-            times.append(time)
-            distances.append(distance)
-            heart_rates.append(heart_rate)
-            speeds.append(speed)
-            cadances.append(int(cadance) * 2)
-            altitude_meters.append(altitude_meter)
-
-        return times, distances, heart_rates, speeds, cadances, altitude_meters
 
 def main():
     """
@@ -191,9 +63,18 @@ def main():
     res_cd = []
     res_al = []
 
+    save_directory = os.path.join(os.getcwd(),
+                                  input("Please insert the directory where you want store your files: "))
+    create_directory(save_directory)
+    
+    file_path = input('Please insert the directory where tcx files are stored: ')
+    while not os.path.exists(file_path):
+        print("Error: The specified directory does not exist.")
+        file_path = input('Please insert the directory where tcx files are stored: ')
+
     (times, time_column, heart_rate_column, speed_column,
-     cadence_column, altitude_column, db,
-     save_directory) = connect_to_database()
+     cadence_column, altitude_column, db
+     ) = connect_to_database(file_path)
 
     name = input("Please insert your full name: ")
 
@@ -230,7 +111,7 @@ def main():
 
     # Create a pandas dataframe
     df = pd.DataFrame({
-        "Pace (min/km)": speed_column,
+        "Pace (m/s)": speed_column,
         "Heart Rate (bpm)": heart_rate_column,
         "Cadence (steps/min)": cadence_column,
         "Altitude (m)": altitude_column
