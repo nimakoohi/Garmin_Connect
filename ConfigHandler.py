@@ -11,7 +11,7 @@ def read_config(config_file_path='config.ini'):
     except configparser.Error as e:
         print(f"Error reading the configuration file: {e}")
 
-        return config
+    return config
 
 # Example Usage:
 # config = read_config()

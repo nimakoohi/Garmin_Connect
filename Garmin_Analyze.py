@@ -136,7 +136,7 @@ def main():
     standard_deviation_altitude = df['Altitude (m)'].std()
 
     try:
-        for find_another_km in range(0 , total_km):
+        for find_another_km in range(0, total_km):
             another_km = f'''SELECT
             CONCAT(
                 CASE
@@ -149,7 +149,7 @@ def main():
             ) AS result
             FROM ActivityData
             WHERE Distance BETWEEN {find_another_km}000
-            AND {find_another_km+1}000 
+            AND {find_another_km+1}000
             '''
             
             db.connection.commit()
