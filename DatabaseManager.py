@@ -23,23 +23,27 @@ class DatabaseManager:
 
             self.create_tables()
 
-            return True
         except mysql.connector.Error as e:
             print(f"Error: {e}")
             return False
 
     def create_tables(self):
         create_tables_query = """
-        DROP TABLE IF EXISTS ActivityData;
-
         CREATE TABLE IF NOT EXISTS ActivityData (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            run_name_id INT,
             Time DATETIME,
             Distance FLOAT,
             Heart_Rate FLOAT,
             Speed FLOAT,
             Cadance INT,
-            Altitude_Meters FLOAT
+            Altitude_Meters FLOAT,
+            FOREIGN KEY (run_name_id) REFERENCES Run_Name(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS Run_Name (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            run_name VARCHAR(50)
         )
         """
 

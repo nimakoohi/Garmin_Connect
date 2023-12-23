@@ -1,5 +1,8 @@
-#1. Add all wourkout on Database
-#2. Compare long run with each other
+# 1. Add all wourkout on Database
+# 2. Compare long run with each other
+# 3. Link to the site
+# 4. Add other plot
+# 5. get a tcx files in folder and extract word and pictures into another folder.
 
 import os
 import pandas as pd
@@ -9,37 +12,49 @@ from TCXParser import TCXParser
 from Plotting import Plotting
 from ConfigHandler import read_config
 
-def connect_to_database(file_path):
-
+def connect_to_database(file_path, name, types_of_runs):
     config = read_config()
       
     db = DatabaseManager(config)
+    
+    (times, distances, heart_rates, speeds,
+     cadances, altitude_meters) = TCXParser.parse(file_path)
+
+    time_column = times
+    heart_rate_column = heart_rates
+    speed_column = speeds
+    cadence_column = cadances
+    altitude_column = altitude_meters
 
     # connect to db
     if db.establish_connection():
-        (times, distances, heart_rates, speeds,
-         cadances, altitude_meters) = TCXParser.parse(file_path)
-        data = list(zip(times, distances, heart_rates, speeds,
-                        cadances, altitude_meters))
+        print("Connection established successfully")
+        insert_query_run_name = ("""
+                                 INSERT INTO Run_Name(run_name) VALUES (%s)
+                                 """)
+        
+        run_name = f'{name} - {types_of_runs} - {times[0].split()[0]}'
+
+        db.cursor.execute(insert_query_run_name, (run_name, ))
+        db.connection.commit()
+
+        db.cursor.execute(f"SELECT * FROM Run_Name WHERE run_name = '{run_name}'")
+        run_name_id = db.cursor.fetchone()[0]
+        print(run_name_id)
+
+        data = list(zip(run_name_id, times, distances, heart_rates, speeds,
+                    cadances, altitude_meters))
 
         insert_query = ("""
-        INSERT INTO ActivityData (Time, Distance, Heart_Rate, Speed, Cadance,
-        Altitude_Meters) VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO ActivityData (run_rame_id, Time, Distance, Heart_Rate,
+        Speed, Cadance, Altitude_Meters) VALUES (%s, %s, %s, %s, %s, %s, %s)
         """)
 
         db.cursor.executemany(insert_query, data)
         db.connection.commit()
         
-        time_column = times
-        heart_rate_column = heart_rates
-        speed_column = speeds
-        cadence_column = cadances
-        altitude_column = altitude_meters
-
-        return (times, time_column, heart_rate_column, speed_column,
-                cadence_column, altitude_column, db)
-
-    return None  # Return None if the connection is not established
+    return (times, time_column, heart_rate_column, speed_column,
+            cadence_column, altitude_column, db)
 
 def create_directory(directory_path):
     try:
@@ -72,10 +87,6 @@ def main():
         print("Error: The specified directory does not exist.")
         file_path = input('Please insert the directory where tcx files are stored: ')
 
-    (times, time_column, heart_rate_column, speed_column,
-     cadence_column, altitude_column, db
-     ) = connect_to_database(file_path)
-
     name = input("Please insert your full name: ")
 
     types_of_runs = input(''' Please tell us what types of runs you do:
@@ -88,11 +99,14 @@ def main():
     - Progression Run
     - Cross-Training Run 
     ''')
+    
+    (times, time_column, heart_rate_column, speed_column,
+     cadence_column, altitude_column, db) = connect_to_database(file_path, name, types_of_runs)
 
     find_total_km = "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
 
     db.cursor.execute(find_total_km)
-    total_km_result = round(db.cursor.fetchone()[0])
+    total_km_result = db.cursor.fetchone()[0]
 
     if total_km_result:
         total_km = round(total_km_result/1000)
