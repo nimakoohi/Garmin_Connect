@@ -14,9 +14,9 @@ from ConfigHandler import read_config
 
 def connect_to_database(file_path, name, types_of_runs):
     config = read_config()
-      
+
     db = DatabaseManager(config)
-    
+
     (times, distances, heart_rates, speeds,
      cadances, altitude_meters) = TCXParser.parse(file_path)
 
@@ -26,32 +26,33 @@ def connect_to_database(file_path, name, types_of_runs):
     cadence_column = cadances
     altitude_column = altitude_meters
 
-    # connect to db
     if db.establish_connection():
-        print("Connection established successfully")
         insert_query_run_name = ("""
                                  INSERT INTO Run_Name(run_name) VALUES (%s)
                                  """)
-        
-        run_name = f'{name} - {types_of_runs} - {times[0].split()[0]}'
+
+        run_name = f'{name}_{types_of_runs}_{times[0].split()[0]}'
 
         db.cursor.execute(insert_query_run_name, (run_name, ))
-        db.connection.commit()
 
         db.cursor.execute(f"SELECT * FROM Run_Name WHERE run_name = '{run_name}'")
         run_name_id = db.cursor.fetchone()[0]
-        print(run_name_id)
+        run_name_id = [run_name_id]
 
+        run_name_id.extend([run_name_id[0]] * (len(times) - 1))
+        
         data = list(zip(run_name_id, times, distances, heart_rates, speeds,
                     cadances, altitude_meters))
 
         insert_query = ("""
-        INSERT INTO ActivityData (run_rame_id, Time, Distance, Heart_Rate,
+        INSERT INTO ActivityData (run_name_id, Time, Distance, Heart_Rate,
         Speed, Cadance, Altitude_Meters) VALUES (%s, %s, %s, %s, %s, %s, %s)
         """)
 
         db.cursor.executemany(insert_query, data)
         db.connection.commit()
+    else:
+        print("Failed to establish connection")
         
     return (times, time_column, heart_rate_column, speed_column,
             cadence_column, altitude_column, db)
@@ -99,7 +100,7 @@ def main():
     - Progression Run
     - Cross-Training Run 
     ''')
-    
+
     (times, time_column, heart_rate_column, speed_column,
      cadence_column, altitude_column, db) = connect_to_database(file_path, name, types_of_runs)
 
