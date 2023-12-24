@@ -3,7 +3,7 @@ import os
 
 def Plotting(time_column, heart_rate_column, speed_column, cadence_column,
              altitude_column, save_directory, name,
-             total_km_result, types_of_runs, times):
+             types_of_runs, times, distances):
     # Plotting speeds against times
     try:
 
@@ -22,8 +22,8 @@ def Plotting(time_column, heart_rate_column, speed_column, cadence_column,
         print(f"Error plotting speeds: {e}")
     
     # Save the image file
-    image_file_path = os.path.join(save_directory, f'{name} - {types_of_runs}'
-                                   '- {times[0].split()[0]} - {total_km_result}.png')
+    image_file_path = os.path.join(save_directory,
+                                   f'{name} - {types_of_runs} - {times[0].split()[0]} - {(distances[-1])[:2]}km.png')
     try:
         plt.savefig(image_file_path)
         print("Image file saved successfully:", image_file_path)

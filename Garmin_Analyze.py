@@ -6,11 +6,11 @@
 
 import os
 import pandas as pd
-from docx import Document
 from DatabaseManager import DatabaseManager
 from TCXParser import TCXParser
 from Plotting import Plotting
 from ConfigHandler import read_config
+from export_to_word import running_evaluation_questions
 
 def connect_to_database(file_path, name, types_of_runs):
     config = read_config()
@@ -31,7 +31,7 @@ def connect_to_database(file_path, name, types_of_runs):
                                  INSERT INTO Run_Name(run_name) VALUES (%s)
                                  """)
 
-        run_name = f'{name}_{types_of_runs}_{times[0].split()[0]}'
+        run_name = f'{name} - {types_of_runs} - {times[0].split()[0]} - {(distances[-1])[:2]}km'
 
         db.cursor.execute(insert_query_run_name, (run_name, ))
 
@@ -55,7 +55,7 @@ def connect_to_database(file_path, name, types_of_runs):
         print("Failed to establish connection")
         
     return (times, time_column, heart_rate_column, speed_column,
-            cadence_column, altitude_column, db)
+            cadence_column, altitude_column, db, distances)
 
 def create_directory(directory_path):
     try:
@@ -102,7 +102,7 @@ def main():
     ''')
 
     (times, time_column, heart_rate_column, speed_column,
-     cadence_column, altitude_column, db) = connect_to_database(file_path, name, types_of_runs)
+     cadence_column, altitude_column, db, distances) = connect_to_database(file_path, name, types_of_runs)
 
     find_total_km = "SELECT Distance AS row_count FROM ActivityData ORDER BY id DESC LIMIT 1;"
 
@@ -116,7 +116,7 @@ def main():
         print("Failed to retrieve Total km.")
 
     Plotting(time_column, heart_rate_column, speed_column, cadence_column,
-             altitude_column, save_directory, name, total_km_result, types_of_runs, times)
+             altitude_column, save_directory, name, types_of_runs, times, distances)
 
     find_total_km = '''SELECT Distance AS row_count FROM ActivityData
     ORDER BY id DESC LIMIT 1'''
@@ -252,154 +252,20 @@ def main():
             al_me = db.cursor.fetchone()[0]
             res_al.append(al_me)
 
-    except mysql.connector.Error as e:
+    except db.connector.Error as e:
         print(f"Database error: {e.errno} - {e.msg}")
     except Exception as e:
         print(f"Other error: {e}")
 
     db.close_connection()
 
-    Physical_Comfort_Response1 = input('''How did your body feel during the run?
-                                       Any specific areas of discomfort or pain? ''')
-    Physical_Comfort_Response2 = input('''Did you experience any muscle tightness, soreness, or stiffness? ''')
-
-    Breathing_and_Cardiovascular_Response1 = input('''How was your breathing throughout the run? Was it comfortable or labored? ''')
-    Breathing_and_Cardiovascular_Response2 = input('''Did you notice any
-                                                   changes in your heart rate, and if so, were they within a comfortable range? ''')
-
-    Energy_Levels_Response = input('''How would you describe your energy
-                                   levels during the run? Did you feel fatigued at any point? ''')
-
-    Mental_State_Response1 = input('''What was your mental state like during
-                                   the run? Were you focused, distracted, or perhaps in a flow state? ''')
-
-    Mental_State_Response2 = input('''Did you experience any mental barriers or breakthroughs? ''')
-
-    Running_Form_Response1 = input('''Were you mindful of your running form? Did you notice any changes in your gait or posture? ''')
-    Running_Form_Response2 = input('''Did you encounter any challenges related to your form? ''')
-
-    Terrain_and_Environment_Response1 = input('''How did the terrain (e.g., flat, hilly, uneven) impact your running experience? ''')
-    Terrain_and_Environment_Response2 = input('''Did the weather or environmental conditions affect your performance or enjoyment? ''')
-
-    Hydration_and_Nutrition_Response1 = input('''Did you feel adequately hydrated and fueled before and during the run? ''')
-    Hydration_and_Nutrition_Response2 = input('''Did you experience any issues related to nutrition or hydration? ''')
-
-    Goal_Achievement_Response1 = input('''Were you able to meet the goals you set for yourself during the run? ''')
-    Goal_Achievement_Response2 = input('''How do you feel about your overall performance and progress? ''')
-
-    Recovery_Response1 = input('''How is your body feeling post-run? Any lingering discomfort or signs of quick recovery? ''')
-    Recovery_Response2 = input('''Did you engage in any post-run stretching or recovery activities? ''')
-
-    Overall_Satisfaction1 = input('''On a scale of 1 to 10, how satisfied are you with your running experience today? ''')
-    Overall_Satisfaction2 = input('''What aspects of the run brought you the most joy or fulfillment? ''')
-
-    # Create a new Word document
-    doc = Document()
-
-    # Add content to the document 
-    doc.add_heading(f'{total_km_result} meters on {times[0]}', level=1)
-
-    output_text = (f'''
-    Hi.
-    I hope this message finds you well. I wanted to share the details of my recent {types_of_runs} for your analysis and feedback.
-
-    **Run Details:**
-    - Distance: {total_km_result} meters
-    - Duration: {times[0]} to {times[-1]}
-
-    **Average Pace per Kilometer:**
-    - {res_Speed}
-
-    **Average Heart Rate per Kilometer:**
-    - {res_hr}
-
-    **Average Cadence per Kilometer:**
-    - {res_cd}
-
-    **Average Altitude per Kilometer:**
-    - {res_al}
-
-    **Standard Deviation:**
-    - Pace: {standard_deviation_pace} m/s
-    - Heart Rate: {standard_deviation_heart_rate} bpm
-    - Cadence: {standard_deviation_cadence} steps/min
-    - Altitude: {standard_deviation_altitude} m
-
-    I would greatly appreciate your insights and any recommendations you may have based on this data. Thank you in advance for your guidance.
-
-    Best regards,
-
-    Nima
-
-    These are my answers after the run:
-    Physical Comfort:
-    How did your body feel during the run? Any specific areas of discomfort or pain?
-    {Physical_Comfort_Response1}
-    Did you experience any muscle tightness, soreness, or stiffness?
-    {Physical_Comfort_Response2}
-
-
-    Breathing and Cardiovascular Response:
-    How was your breathing throughout the run? Was it comfortable or labored?
-    {Breathing_and_Cardiovascular_Response1}
-    Did you notice any changes in your heart rate, and if so, were they within a comfortable range?
-    {Breathing_and_Cardiovascular_Response2}
-
-    Energy Levels:
-    How would you describe your energy levels during the run? Did you feel fatigued at any point?
-    {Energy_Levels_Response}
-
-    Mental State:
-    What was your mental state like during the run? Were you focused, distracted, or perhaps in a flow state?
-    {Mental_State_Response1}
-    Did you experience any mental barriers or breakthroughs?
-    {Mental_State_Response2}
-
-    Running Form:
-    Were you mindful of your running form? Did you notice any changes in your gait or posture?
-    {Running_Form_Response1}
-    Did you encounter any challenges related to your form?
-    {Running_Form_Response2}
-
-    Terrain and Environment:
-    How did the terrain (e.g., flat, hilly, uneven) impact your running experience?
-    {Terrain_and_Environment_Response1}
-    Did the weather or environmental conditions affect your performance or enjoyment?
-    {Terrain_and_Environment_Response2}
-
-    Hydration and Nutrition:
-    Did you feel adequately hydrated and fueled before and during the run?
-    {Hydration_and_Nutrition_Response1}
-    Did you experience any issues related to nutrition or hydration?
-    {Hydration_and_Nutrition_Response2}
-
-    Goal Achievement:
-    Were you able to meet the goals you set for yourself during the run?
-    {Goal_Achievement_Response1}
-    How do you feel about your overall performance and progress?
-    {Goal_Achievement_Response2}
-
-    Recovery:
-    How is your body feeling post-run? Any lingering discomfort or signs of quick recovery?
-    {Recovery_Response1}
-    Did you engage in any post-run stretching or recovery activities?
-    {Recovery_Response2}
-
-    Overall Satisfaction:
-    On a scale of 1 to 10, how satisfied are you with your running experience today?
-    {Overall_Satisfaction1}
-    What aspects of the run brought you the most joy or fulfillment?
-    {Overall_Satisfaction2}
-    ''')
-
-    # Add the output text to the document
-    doc.add_paragraph(output_text)
-
-    # Save the document
-    doc_file_path = os.path.join(save_directory, f'{name} - {types_of_runs} - {times[0].split()[0]} - {total_km_result}.docx')
-    doc.save(doc_file_path)
-
-    print("Output has been printed to Word document:", doc_file_path)
+    running_evaluation_questions(times, types_of_runs,
+                                 res_Speed, res_hr, res_cd, res_al,
+                                 standard_deviation_pace,
+                                 standard_deviation_heart_rate,
+                                 standard_deviation_cadence,
+                                 standard_deviation_altitude, save_directory,
+                                 name, distances)
 
 if __name__ == "__main__":
     main()
