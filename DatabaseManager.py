@@ -43,7 +43,7 @@ class DatabaseManager:
             Time DATETIME,
             Distance FLOAT,
             Heart_Rate FLOAT,
-            Speed FLOAT,
+            Speed TIME,
             Cadance INT,
             Altitude_Meters FLOAT,
             FOREIGN KEY (run_name_id) REFERENCES Run_Name(id)

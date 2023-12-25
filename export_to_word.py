@@ -21,7 +21,7 @@ def running_evaluation_questions(times, types_of_runs,
                                  standard_deviation_heart_rate,
                                  standard_deviation_cadence,
                                  standard_deviation_altitude, save_directory,
-                                 name, distances):
+                                 name, distances, total_km_result, total_km):
     Physical_Comfort_Response1 = input('''How did your body feel during the run?
                                        Any specific areas of discomfort or pain? ''')
     Physical_Comfort_Response2 = input('''Did you experience any muscle tightness, soreness, or stiffness? ''')
@@ -66,9 +66,12 @@ def running_evaluation_questions(times, types_of_runs,
     add_formatted_paragraph(doc, "Hi.\nI hope this message finds you well. I wanted to share the details of my recent "
                                  f"{types_of_runs} for your analysis and feedback.\n\n**Run Details:**\n- Distance: "
                                  f"{(distances[-1])[:2]} kilometers\n- Duration: {times[0]} to {times[-1]}\n\n**Average Pace "
-                                 f"per Kilometer:**\n- {res_Speed}\n\n**Average Heart Rate per Kilometer:**\n- {res_hr}\n\n"
-                                 f"**Average Cadence per Kilometer:**\n- {res_cd}\n\n**Average Altitude per Kilometer:**\n- "
-                                 f"{res_al}\n\n**Standard Deviation:**\n- Pace: {standard_deviation_pace} m/s\n- Heart Rate: "
+                                 f"per Kilometer:**\n- {res_Speed[:-1]}\n**Final {total_km_result-(total_km * 1000)} meters: {res_Speed[-1]}\n\n"
+                                 f"**Average Heart Rate per Kilometer:**\n- {res_hr[:-1]}\n**Final {total_km_result-(total_km * 1000)} meters: {res_hr[-1]}\n\n"
+                                 f"**Average Cadence per Kilometer:**\n- {res_cd[:-1]}\n**Final {total_km_result-(total_km * 1000)} meters: {res_cd[-1]}\n\n"
+                                 "**Average Altitude per Kilometer:**\n- "
+                                 f"{res_al[:-1]}\n**Final {total_km_result-(total_km * 1000)} meters: {res_al[-1]}\n\n"
+                                 f"**Standard Deviation:**\n- Pace: {standard_deviation_pace} m/s\n- Heart Rate: "
                                  f"{standard_deviation_heart_rate} bpm\n- Cadence: {standard_deviation_cadence} steps/min\n- "
                                  f"Altitude: {standard_deviation_altitude} m\n\nI would greatly appreciate your insights and "
                                  "any recommendations you may have based on this data. Thank you in advance for your guidance."
